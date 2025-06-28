@@ -4,7 +4,7 @@ const recentQues = require('../models/recents')
 
 const updateQues = async (req, res, next) => {
     try {
-        const { data } = await axios.post('https://api.example.com/getQuestions', req.body || {})
+        const { data } = await axios.post('https://practiceapi.geeksforgeeks.org/api/v1/user/problems/submissions/', req.body || {})
 
         const result = data?.result || {}
 
