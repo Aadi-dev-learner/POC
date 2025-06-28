@@ -40,7 +40,7 @@ const updateQues = async (req, res, next) => {
             await recentQues.insertMany(newQues)
         }
 
-        res.json({added : newQues.length})
+        console.log("updated succesfully.")
 
         next()
 
