@@ -3,7 +3,7 @@ const router = express.Router();
 const recents = require('../models/recents');
 const update = require('../middlewares/updateData')
 
-router.get('/recent', update, async (req, res) => {
+router.post('/recent', update, async (req, res) => {
     try {
         const recent = await recents.find({});
         res.json(recent);
