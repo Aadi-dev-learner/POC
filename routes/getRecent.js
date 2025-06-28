@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const recents = require('../models/recents');
+const update = require('../middlewares/updateData')
 
 router.get('/recent', async (req, res) => {
     try {
