@@ -2,7 +2,7 @@ const axios = require('axios')
 const allQues = require('../models/allQuetions')
 const recentQues = require('../models/recents')
 
-const updateQues = async (req, res) => {
+const updateQues = async (req, res, next) => {
     try {
         const { data } = await axios.post('https://api.example.com/getQuestions', req.body || {})
 
