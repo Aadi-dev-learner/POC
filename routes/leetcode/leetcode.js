@@ -17,6 +17,20 @@ async function createGraphReq(query, variables, next) {
 
 
 
+
+async function getSubmissions(req,res,next) {
+    try {
+        const submissions = await req.leetcode.submissions({limit : 40,offset : 0});
+        req.submissions = submissions;
+        next();
+    }
+    catch(err) {
+        
+        return next(new ErrorHandler("Server Error Ocurred",500));
+    }
+}
+
+
 async function authMW(req, res, next) {
     if (req.body.sessionToken) {
         try {
@@ -112,7 +126,8 @@ router.post("/submissions", authMW, async (req, res, next) => {
                 language: element.lang,
                 time: element.time,
                 title: element.titleSlug,
-                status: element.statusDisplay
+                status: element.statusDisplay,
+                timeStamp : element.timestamp
             }
             responseArray[i] = finalResponse;
 
@@ -158,6 +173,40 @@ router.post("/submission-detail", authMW, async (req, res, next) => {
     catch (err) {
         return next(new ErrorHandler("Server error occurred", 500));
     }
+})
+
+router.post("/recent-submissions",authMW,getSubmissions,async (req,res,next) => {
+    let submissions = req.submissions;
+    const timeStamp = req.query['interval'] * 60000;
+    const currentTime = Date.now();
+    let offset = 0;
+    let response = [];
+    for (let i = 0;i < submissions.length;i++) {
+        if((currentTime- timeStamp) <= submissions[i].timestamp) {
+            response.push(submissions[i]);
+        } 
+        else {
+            break;
+        }
+
+        if (i == submissions.length-1) {
+            offset+=40;
+            const nextResponse = await req.leetcode.submissions({limit : 40,offset : offset});
+            console.log(nextResponse)
+            submissions = [...submissions,...nextResponse]
+        }
+    }
+    const diffeculty = {};
+    
+
+    for (i in response) {
+        if (!diffeculty[response[i].titleSlug]) {
+            const problemInfo = await req.leetcode.problem(response[i].titleSlug);
+            console.log(problemInfo);
+            diffeculty[response[i].titleSlug] = problemInfo;
+        }
+    }
+    res.status(200).json(response);
 })
 
 
