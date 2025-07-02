@@ -1,13 +1,13 @@
 const axios = require('axios')
 const allQues = require('../models/allQuetions')
 const recentQues = require('../models/recents')
-
+const createResponse = require("../models/SubmissionResponseModel");
 const updateQues = async (req, res, next) => {
     try {
         const { data } = await axios.post('https://practiceapi.geeksforgeeks.org/api/v1/user/problems/submissions/', req.body || {})
 
         const result = data?.result || {}
-
+        const finalResponse = createResponse("gfg");
         const ques = []
 
         for (const difficulty of Object.keys(result)) {
@@ -16,7 +16,6 @@ const updateQues = async (req, res, next) => {
 
             for (const qid of Object.keys(result[difficulty])) {
                 const q = result[difficulty][qid]
-
                 ques.push({
                     quetionid : qid,
                     pname : q.pname,
