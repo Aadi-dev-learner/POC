@@ -124,8 +124,8 @@ router.post("/submissions", authMW, async (req, res, next) => {
                 id: element.id,
                 platform: "leetcode",
                 language: element.lang,
-                time: element.time,
-                title: element.titleSlug,
+                titleSlug: element.titleSlug,
+                title : element.title,
                 status: element.statusDisplay,
                 timeStamp : element.timestamp
             }
