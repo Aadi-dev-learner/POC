@@ -1,13 +1,16 @@
 const axios = require('axios')
 const allQues = require('../models/allQuetions')
 const recentQues = require('../models/recents')
-const createResponse = require("../models/SubmissionResponseModel");
+
 const updateQues = async (req, res, next) => {
     try {
-        const { data } = await axios.post('https://practiceapi.geeksforgeeks.org/api/v1/user/problems/submissions/', req.body || {})
+        const { data } = await axios.post('https://practiceapi.geeksforgeeks.org/api/v1/user/problems/submissions/', req.body || {}, {
+            headers: {
+                'Content-Type': 'application/json', 
+                'Cookie' : req.headers.cookie || '',
+        }})
 
         const result = data?.result || {}
-        const finalResponse = createResponse("gfg");
         const ques = []
 
         for (const difficulty of Object.keys(result)) {
@@ -16,11 +19,35 @@ const updateQues = async (req, res, next) => {
 
             for (const qid of Object.keys(result[difficulty])) {
                 const q = result[difficulty][qid]
+
+                const problem = q.slug
+                const problemData = (await axios.get(`https://practiceapi.geeksforgeeks.org/api/latest/problems/${problem}/submissions/user/`, {
+                    headers: {
+                        'Content-Type': 'application/json', 
+                        'Cookie' : req.headers.cookie || '',
+                }}))
+
+                const submissions = problemData.data.results?.submissions || []
+
+                let wrongCount = 0
+                let time = ""
+
+                for (let i = submissions.length - 1; i >= 0; i--) {
+                    if (submissions[i].user_score == 0) {
+                        wrongCount += 1
+                    } else {
+                        time += submissions[i].subtime
+                        break
+                    }
+                }
+
+                timestamp = time.replace(' ', 'T')
+                // console.log(timestamp)
                 ques.push({
-                    quetionid : qid,
-                    pname : q.pname,
-                    slug : q.slug,
-                    lang : q.lang,
+                    pname : q.slug,
+                    platform : 'gfg',
+                    wrongCnt : wrongCount,
+                    timestamp : new Date(timestamp).getTime(),
                     difficulty
                 })
             }
@@ -31,7 +58,7 @@ const updateQues = async (req, res, next) => {
         const newQues = []
 
         for (const q of ques) {
-            const exist = await allQues.exists({quetionid : q.quetionid})
+            const exist = await allQues.exists({pname : q.pname})
             if (!exist) {
                 newQues.push(q)
             }
