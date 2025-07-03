@@ -11,6 +11,9 @@ const updateQues = async (req, res, next) => {
         const ques = []
 
         for (const difficulty of Object.keys(result)) {
+
+            if (difficulty === 'School' || difficulty === 'Basic') continue
+
             for (const qid of Object.keys(result[difficulty])) {
                 const q = result[difficulty][qid]
                 ques.push({
