@@ -24,7 +24,10 @@ const userSchema = new mongoose.Schema({
     },
     gfgId : {
         type:String,
-    }
+    },
+    gfgCookie : {
+        type:String,
+    },
 });
 
 const userModel = mongoose.model('User',userSchema);

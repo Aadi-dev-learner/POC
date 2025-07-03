@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 
 const updateRoute = require('./routes/gfg/update');
 const recentRoute = require('./routes/gfg/getRecent');
+const problemCount = require('./routes/gfg/totalSubmissions');
 
 const leetcode = require("./routes/leetcode/leetcode");
 const codeforces = require("./routes/codeforces/codeforces");
@@ -23,6 +24,7 @@ app.use(express.json());
 
 app.use('/gfg', updateRoute);
 app.use('/gfg', recentRoute);
+app.use('/gfg', problemCount);
 app.use('/leetcode', leetcode);
 app.use('/codeforces', codeforces);
 app.use("/auth", auth);
