@@ -4,9 +4,18 @@ const router = express.Router();
 const ErrorHandler = require("../../models/ErrorClass");
 const url = "https://codeforces.com/api";
 const createResponse = require("../../models/SubmissionResponseModel");
+
+
+const autoUpdater =  { 
+    interval : 10,
+    last_updated: 1751585332000
+};
+
 router.get("/", (req, res) => {
     res.send("This is the codeforces api");
 })
+
+
 
 router.get("/user-info", (req, res, next) => {
     axios(`${url}/user.info?handles=${req.query['handle']}`).then(data => {
@@ -16,12 +25,19 @@ router.get("/user-info", (req, res, next) => {
     })
 })
 
-async function getSubmissions(req, res, next) {
-    try {
 
+
+async function getSubmissions(timestamp) {
+    try {
+        const out = [];
         const submissions = (await axios(`${url}/user.status?handle=${req.query['handle']}`)).data;
         req.submissions = submissions.result;
-        next();
+        submissions.every(submissionElement => {
+            if (submissionElement.creationTimeSeconds < timestamp) {
+                return false;
+            }
+            out.push(submissionElement);
+        })
     }
     catch (err) {
         return next(new ErrorHandler("Server error occured", 500));
@@ -29,29 +45,10 @@ async function getSubmissions(req, res, next) {
 
 }
 
-router.get("/submissions",getSubmissions, async (req, res, next) => {
-    try {
-
-        const responseData = req.submissions; 
-        let finalResponse = createResponse("codeforces");
-        let responseArray = [];
-        for (i in responseData) {
-            finalResponse = {
-                id: responseData[i].id,
-                language: responseData[i].programmingLanguage,
-                time: responseData[i].creationTimeSeconds,
-                title: responseData[i].problem?.name,
-                status: responseData[i].verdict,
-            };
-            responseArray.push(finalResponse);
-            
-        }
-        res.status(200).json(responseArray);
-    }
-    catch(err){
-        return next(new ErrorHandler("Server Error Occured",500));
-    }
-
+router.get("/submissions", async (req, res, next) => {
+    const username = req.body.username;
+    
+       
 })
 router.get("/question-count", async (req, res, next) => {
     try {
@@ -92,7 +89,6 @@ router.get("/question-count", async (req, res, next) => {
         return next(new ErrorHandler("Server error occured", 500));
     }
 })
-
 router.get("/recent-submissions",getSubmissions, (req, res, next) => {
     const interval = req.query['interval'] * 60000;
     const currentTime = Date.now();
