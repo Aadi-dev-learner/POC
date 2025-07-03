@@ -1,5 +1,5 @@
 const express = require("express")
-const userDB = require('../../models/')
+// const userDB = require('../../models/User')
 const router = express.Router()
 const allQuetions = require('../../models/allQuetions')
 
