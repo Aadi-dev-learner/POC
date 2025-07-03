@@ -1,10 +1,10 @@
 const mongoose = require("mongoose")
 
 const recents = new mongoose.Schema({
-    quetionid : {type : String, unique : true}, 
-    pname : String, 
-    slug : String,
-    lang : String,
+    pname : {type : String, unique : true},
+    platform : String,
+    wrongCnt : Number,
+    timestamp : Number,
     difficulty : String,
 })
 
