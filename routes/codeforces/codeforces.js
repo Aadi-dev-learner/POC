@@ -109,7 +109,17 @@ router.get("/recent-submissions", async (req, res, next) => {
           if (submission.verdict !== "OK") {
             solvedQues[ProblemName][0]++;
           } else {
-            solvedQues[ProblemName][1] = 1;
+            // Check if first correct submission is BEFORE timestamp
+            if (submission.creationTimeSeconds < timestamp) {
+              // Remove from solvedQues
+              delete solvedQues[ProblemName];
+              // Also remove from responseArray
+              responseArray = responseArray.filter(
+                (entry) => entry.name !== ProblemName
+              );
+            } else {
+              solvedQues[ProblemName][1] = 1;
+            }
           }
         }
       }
@@ -122,8 +132,7 @@ router.get("/recent-submissions", async (req, res, next) => {
 
       currentQues.wrong_count = solvedQues[ProblemName][0];
     }
-    console.log(responseArray);
-    
+
     res.status(200).json(responseArray);
   } catch (err) {
     console.log(err);
