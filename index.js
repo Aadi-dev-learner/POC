@@ -4,7 +4,6 @@ const dotenv = require('dotenv');
 
 const updateRoute = require('./routes/gfg/update');
 const recentRoute = require('./routes/gfg/getRecent');
-const 
 const leetcode = require("./routes/leetcode/leetcode");
 const codeforces = require("./routes/codeforces/codeforces");
 const auth = require("./routes/auth/auth");

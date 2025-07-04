@@ -43,27 +43,39 @@ function ratingToDifficulty(rating) {
 async function getSubmissions(handle,timestamp) {
     try {
         const out = [];
-        const submissions = (await axios(`${url}/user.status?handle=${handle}`)).data;
-        req.submissions = submissions.result;
+        let submissions = (await axios(`${url}/user.status?handle=${handle}`)).data;
+
+        submissions = submissions.result;
         submissions.every(submissionElement => {
-            if (submissionElement.creationTimeSeconds < timestamp) {
+            console.log(submissionElement);
+            if (submissionElement.creationTimeSeconds > timestamp) {
                 return false;
             }
             out.push(submissionElement);
+            
         })
+        console.log(out);
+        return out;
     }
     catch (err) {
+        console.log(err);
         return next(new ErrorHandler("Server error occured", 500));
     }
 
 }
 
 router.get("/recent-submissions", async (req, res, next) => {
-    const username = req.body.username;
-    const cfHandle = (await userModel.findOne({username : username})).codeforcesId;
+    try {
 
-    res.send(cfHandle);
-})
+        const username = req.body.username;
+        const cfHandle = (await userModel.findOne({username : username})).codeforcesId;
+        const finalResponse = await getSubmissions(cfHandle, autoUpdater.last_updated);
+        res.send(finalResponse);
+    }catch(err) {
+        console.log(err);
+        return next(new ErrorHandler("Server error occured", 500));
+    }
+});
 router.get("/submissions", (req, res, next) => {
     axios(`${url}/user.status?handle=${req.query["handle"]}`)
         .then((data) => {
@@ -82,7 +94,7 @@ router.get("/submissions", (req, res, next) => {
             // }
             let responseArray = [];
             let cnt = 0;
-            let idx = 0;
+            let idx = 0;    
 
             let solvedQues = {};
             while (cnt < 5) {
