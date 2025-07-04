@@ -5,3 +5,5 @@ const requiredInfo = new mongoose.Schema({
     difficulty : String,
     wrongCnt : Number,
 })
+
+module.exports = mongoose.models("infoForRatings", requiredInfo)
