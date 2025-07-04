@@ -22,19 +22,10 @@ async function createGraphReq(query, variables, next) {
     }
 }
 
-async function getRawSubmissions(req,res,next) {
-    try {
-        const submissions = await req.leetcode.submissions({limit : 40,offset : 0});
-        req.submissions = submissions;
-        next();
-    }
-    catch(err) {
-        
-        return next(new ErrorHandler("Server Error Ocurred",500));
-    }
-}
 
 
+
+//function responsible for authenticating sessiontoken for leetcode and returning the leetcode object
 async function authenticate(sessionToken) {
     if (!sessionToken) {
         throw new ErrorHandler("Session token is required", 400);
@@ -46,10 +37,15 @@ async function authenticate(sessionToken) {
 
         return new LeetCode(credential);
     } catch (err) {
+        console.log(err);
         throw new ErrorHandler("Invalid session token", 401);
     }
 }
 
+
+
+
+//function responsible for getting the recent submissions for a user
 async function getSubmissions(timestamp, sessionToken) {
     try {
         // TODO: Make it respect the interval
@@ -104,6 +100,8 @@ router.get("/", (req, res) => {
     res.send("this is the lc api");
 })
 
+
+//function responsible for getting the question count for a user
 router.get("/question-count", async (req, res, next) => {
     console.log(req.body);
     try {
@@ -151,18 +149,23 @@ router.get("/question-count", async (req, res, next) => {
 
 })
 
+
+//a common route calling the getSubmissions function
 router.get("/submissions", async (req, res, next) => {
-    const username = req.body.username;
-    const data = await userModel.findOne({ username: username });
+    try {
 
-    const sessionToken = data.leetcodeSessionToken;
-
-    getSubmissions(autoUpdater.last_updated, sessionToken).then(submissions => {
-        res.status(200).json(submissions);
-    }).catch(err => {
+        const username = req.body.username;
+        const userInfo = await userModel.findOne({ username: username });
+        
+        const sessionToken = userInfo.leetcodeSessionToken;
+        
+        const response = await getSubmissions(autoUpdater.last_updated, sessionToken);
+        res.status(200).json(response);
+    }
+    catch(err) {
         console.log(err);
-        return next(new ErrorHandler("Server error occurred", 500));
-    });
+        throw new ErrorHandler(err.message , err.status || 500);
+    }
 })
 
 // router.get("/accepted-submissions", authMW, async (req, res, next) => {
@@ -176,6 +179,30 @@ router.get("/submissions", async (req, res, next) => {
 //         return next(new ErrorHandler("Server Error Occured", 500));
 //     }
 // })
+
+module.exports = router;
+
+
+
+
+
+
+
+
+
+// async function getRawSubmissions(req,res,next) {
+//     try {
+//         const submissions = await req.leetcode.submissions({limit : 40,offset : 0});
+//         req.submissions = submissions;
+//         next();
+//     }
+//     catch(err) {
+        
+//         return next(new ErrorHandler("Server Error Ocurred",500));
+//     }
+// }
+
+
 
 // router.get("/submission-detail", authMW, async (req, res, next) => {
 //     try {
@@ -223,5 +250,3 @@ router.get("/submissions", async (req, res, next) => {
 //     res.status(200).json(response);
 // })
 
-
-module.exports = router;
