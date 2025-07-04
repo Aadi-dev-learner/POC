@@ -61,10 +61,10 @@ router.get("/user-info", (req, res, next) => {
 
 router.get("/recent-submissions", async (req, res, next) => {
   try {
-    // const username = req.body.username;
-    // const cfHandle = (await userModel.findOne({ username: username }))
-    //   .codeforcesId;
-    const cfHandle = "Mayank016";
+    const username = req.body.username;
+    const cfHandle = (await userModel.findOne({ username: username }))
+      .codeforcesId;
+      
     // Fetch all submissions once
     const allDataResponse = await axios(
       `${url}/user.status?handle=${cfHandle}`
