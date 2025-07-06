@@ -5,7 +5,7 @@ const { LeetCode, Credential } = require("leetcode-query");
 const createResponse = require("../../models/SubmissionResponseModel");
 const ErrorHandler = require("../../models/ErrorClass");
 const userModel = require("../../models/User");
-
+const authenticate = require("../../middlewares/authentication");
 const autoUpdater = {
   interval: 10,
   last_updated: 1751394600000
@@ -13,12 +13,13 @@ const autoUpdater = {
 
 async function createGraphReq(query, variables, next) {
     try {
-        const axiosResponse = await axios.get("https://leetcode.com/graphql", { query, variables });
+        const axiosResponse = await axios.post("https://leetcode.com/graphql", { query, variables });
         console.log(axiosResponse.data);
         return axiosResponse.data;
     }
     catch (err) {
-        return next(new ErrorHandler(err, 500));
+        console.log(err);
+        return next(new ErrorHandler(err.message, 500));
     }
 }
 
@@ -26,7 +27,7 @@ async function createGraphReq(query, variables, next) {
 
 
 //function responsible for authenticating sessiontoken for leetcode and returning the leetcode object
-async function authenticate(sessionToken) {
+async function createLeetcode(sessionToken) {
     if (!sessionToken) {
         throw new ErrorHandler("Session token is required", 400);
     }
@@ -42,15 +43,95 @@ async function authenticate(sessionToken) {
     }
 }
 
+async function wrongCount(leetcode,titleSlug) {
+    try {
 
+        const query = {
+            query : `#graphql
+                        query submissionList($offset: Int!, $limit: Int!, $lastKey: String, $questionSlug: String!, $lang: Int, $status: Int) {
+                            questionSubmissionList(
+                                offset: $offset
+                                limit: $limit
+                                lastKey: $lastKey
+                                questionSlug: $questionSlug
+                                lang: $lang
+                                status: $status
+                            ) {
+                                lastKey
+                                hasNext
+                                submissions {
+                                id
+                                title
+                                titleSlug
+                                status
+                                statusDisplay
+                                lang
+                                langName
+                                runtime
+                                timestamp
+                                url
+                                isPending
+                                memory
+                                hasNotes
+                                notes
+                                flagType
+                                frontendId
+                                topicTags {
+                                    id
+                                }
+                                }
+                            }
+                            }`,
+                    variables: {
+                        offset: 0,
+                        limit: 40,
+                        lastKey: null,
+                        questionSlug: titleSlug,
+                        lang: null,
+                        status: null
+                    }
+                };
 
+                const problemSubmissions = await leetcode.graphql(query);
+                console.log("submissions of a problem : ",problemSubmissions);
+                let acceptedCount = problemSubmissions.data.questionSubmissionList.submissions.filter(submission => submission.statusDisplay === 'Accepted').length;
+                console.log(acceptedCount);
+                let count = 0; 
+                for (let i = problemSubmissions.data.questionSubmissionList.submissions.length - 1; i >= 0; i--) {
+                    const submission = problemSubmissions.data.questionSubmissionList.submissions[i];
+                    if (submission.statusDisplay !== 'Accepted') {
+                        count++;
+                    } else {
+                        break; 
+                    }
+                }  
+                return acceptedCount === 1 ? count : -1;
+            }
+            catch (err) {
+                console.log(err);
+                throw new ErrorHandler("Server error occurred", 500);
+            }
+        }
 
+async function getProblemDetails(leetcode, titleSlug) {
+    try {
+        const problemDetails = await leetcode.problem(titleSlug);
+        return {
+            title: problemDetails.title,
+            difficulty: problemDetails.difficulty,
+            titleSlug: problemDetails.titleSlug,
+            questionId: problemDetails.questionId,
+        }
+    } catch (err) {
+        console.log(err);
+        throw new ErrorHandler("Failed to fetch problem details", 500);
+    }
+}
 //function responsible for getting the recent submissions for a user
 async function getSubmissions(timestamp, sessionToken) {
     try {
         // TODO: Make it respect the interval
-        const leetcode = await authenticate(sessionToken);
-
+        const leetcode = await createLeetcode(sessionToken);
         let offset = 0;
         let out = [];
         while (true) {
@@ -65,15 +146,21 @@ async function getSubmissions(timestamp, sessionToken) {
                     reachedLimit = true;
                     break;
                 }
-
+                if (element.statusDisplay != 'Accepted') {
+                    continue; // Skip non-accepted submissions
+                }
+                let count = await wrongCount(leetcode, element.titleSlug);
+                console.log(count);
+                if (count === -1) {
+                    continue; // Skip if no accepted submissions
+                }
+                let problemDetails = await getProblemDetails(leetcode, element.titleSlug);
                 finalResponse = {
-                    id: element.id,
+                    title: element.title,
                     platform: "leetcode",
-                    language: element.lang,
-                    time: element.time,
-                    title: element.titleSlug,
-                    status: element.statusDisplay,
-                    timeStamp : element.timestamp
+                    timestamp : element.timestamp,
+                    wrong_count: count,
+                    difficulty: problemDetails.difficulty,
                 }
                 responseArray[i] = finalResponse;
                 validElements.push(responseArray[i]);
@@ -102,12 +189,12 @@ router.get("/", (req, res) => {
 
 
 //function responsible for getting the question count for a user
-router.get("/question-count", async (req, res, next) => {
+router.get("/question-count",authenticate, async (req, res, next) => {
     console.log(req.body);
     try {
-
+        console.log(req.user);
         let variables = {
-            "username": req.body.username
+            "username": req.user.leetcodeId
         };
         const query = `#graphql
         query userProblemsSolved($username: String!) {
@@ -130,7 +217,7 @@ router.get("/question-count", async (req, res, next) => {
         }`
         const axiosResponse = await createGraphReq(query, variables, next);
         console.log(axiosResponse);
-        let submissionNum = axiosResponse.data.matchedUser.submitStatsGlobal.acSubmissionNum;
+        let submissionNum = axiosResponse.data.matchedUser.submitStatsGlobal?.acSubmissionNum;
         console.log(submissionNum);
         res.status(200).json({
             total: submissionNum[0]?.count,
@@ -151,14 +238,10 @@ router.get("/question-count", async (req, res, next) => {
 
 
 //a common route calling the getSubmissions function
-router.get("/submissions", async (req, res, next) => {
+router.get("/submissions",authenticate, async (req, res, next) => {
     try {
 
-        const username = req.body.username;
-        const userInfo = await userModel.findOne({ username: username });
-        
-        const sessionToken = userInfo.leetcodeSessionToken;
-        
+        const sessionToken = req.user.leetcodeSessionToken;
         const response = await getSubmissions(autoUpdater.last_updated, sessionToken);
         res.status(200).json(response);
     }
@@ -168,17 +251,6 @@ router.get("/submissions", async (req, res, next) => {
     }
 })
 
-// router.get("/accepted-submissions", authMW, async (req, res, next) => {
-//     try {
-//         let limit = req.query.limit || 40;
-//         const data = (await req.leetcode.user_progress_questions({ limit: limit }));
-//         res.status(200).json(data);
-//     }
-//     catch (err) {
-//         console.log(err);
-//         return next(new ErrorHandler("Server Error Occured", 500));
-//     }
-// })
 
 module.exports = router;
 
@@ -189,64 +261,4 @@ module.exports = router;
 
 
 
-
-// async function getRawSubmissions(req,res,next) {
-//     try {
-//         const submissions = await req.leetcode.submissions({limit : 40,offset : 0});
-//         req.submissions = submissions;
-//         next();
-//     }
-//     catch(err) {
-        
-//         return next(new ErrorHandler("Server Error Ocurred",500));
-//     }
-// }
-
-
-
-// router.get("/submission-detail", authMW, async (req, res, next) => {
-//     try {
-
-//         const data = await req.leetcode.submission(req.body.id);
-//         res.status(200).json(data);
-//     }
-//     catch (err) {
-//         return next(new ErrorHandler("Server error occurred", 500));
-//     }
-// })
-
-// router.get("/recent-submissions",authMW,getRawSubmissions,async (req,res,next) => {
-//     let submissions = req.submissions;
-//     const timeStamp = req.query['interval'] * 60000;
-//     const currentTime = Date.now();
-//     let offset = 0;
-//     let response = [];
-//     for (let i = 0;i < submissions.length;i++) {
-//         if((currentTime- timeStamp) <= submissions[i].timestamp) {
-//             response.push(submissions[i]);
-//         } 
-//         else {
-//             break;
-//         }
-
-//         // TODO: Remove magic number
-//         if (i == submissions.length-1) {
-//             offset+=40; // 40 is the limit of submissions per request
-//             const nextResponse = await req.leetcode.submissions({limit : 40,offset : offset});
-//             console.log(nextResponse)
-//             submissions = [...submissions,...nextResponse]
-//         }
-//     }
-//     const diffeculty = {};
-    
-
-//     for (i in response) {
-//         if (!diffeculty[response[i].titleSlug]) {
-//             const problemInfo = await req.leetcode.problem(response[i].titleSlug);
-//             console.log(problemInfo);
-//             diffeculty[response[i].titleSlug] = problemInfo;
-//         }
-//     }
-//     res.status(200).json(response);
-// })
 
