@@ -66,7 +66,7 @@ router.post("/login", async (req, res, next) => {
 router.post("/signup", async (req, res, next) => {
 
 
-    const { username, password, email, leetcodeId, gfgId, codeforcesId, sessionId } = req.body;
+    const { username, password, email, leetcodeId, gfgId, codeforcesId, sessionId, gfgCookie } = req.body;
 
     const user = userModel({
         username: username,
@@ -75,6 +75,7 @@ router.post("/signup", async (req, res, next) => {
         leetcodeId: leetcodeId,
         codeforcesId: codeforcesId,
         gfgId: gfgId,
+        gfgCookie: gfgCookie,
         email : email
     });
 
