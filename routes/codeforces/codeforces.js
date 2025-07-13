@@ -3,18 +3,13 @@ const axios = require("axios");
 const router = express.Router();
 const ErrorHandler = require("../../models/ErrorClass");
 const url = "https://codeforces.com/api";
-const createResponse = require("../../models/SubmissionResponseModel");
-const userModel = require("../../models/User");
+
 const authenticate = require("../../middlewares/authentication");  
+
 const autoUpdater = {
     interval: 10,
     last_updated: 1744272913,
 };
-
-router.get("/", (req, res) => {
-    res.send("This is the codeforces api");
-});
-
 
 function ratingToDifficulty(rating) {
     if (rating < 1000) {
@@ -26,21 +21,9 @@ function ratingToDifficulty(rating) {
     }
 }
 
-router.get("/user-info",authenticate, (req, res, next) => {
-    axios(`${url}/user.info?handles=${req.user.codeforcesId}`)
-        .then((data) => {
-            res.status(200).json(data.data);
-        })
-        .catch((err) => {
-
-            return next(new ErrorHandler(err.message, 500));
-        })
-});
-
-router.get("/submissions", authenticate, async (req, res, next) => {
+router.get("/recents", authenticate, async (req, res, next) => {
     try {
         const cfHandle = req.user.codeforcesId;
-        console.log(cfHandle);
         // Fetch all submissions once
         const allDataResponse = await axios(
             `${url}/user.status?handle=${cfHandle}`
@@ -65,10 +48,10 @@ router.get("/submissions", authenticate, async (req, res, next) => {
                 solvedQues[ProblemName] = [0, 0]; // [wrong_count, is_solved_flag]
 
                 const finalResponse = {
-                    title: ProblemName,
+                    pname: ProblemName,
                     platform: "codeforces",
                     difficulty: ratingToDifficulty(problem.rating),
-                    wrong_count: 0,
+                    wrongCnt: 0,
                     timestamp: submission.creationTimeSeconds,
                 };
 
@@ -104,19 +87,63 @@ router.get("/submissions", authenticate, async (req, res, next) => {
 
         // Step 3: Update the wrong_count in response
         for (let i = 0; i < responseArray.length; i++) {
-            const currentQues = responseArray[i];
-            const ProblemName = currentQues.name;
+            let currentQues = responseArray[i];
+            const ProblemName = currentQues.pname;
 
-            currentQues.wrong_count = solvedQues[ProblemName]?.[0];
+            currentQues.wrongCnt = solvedQues[ProblemName]?.[0];
         }
 
         res.status(200).json(responseArray);
     } catch (err) {
         console.log(err.message);
-        return next(new ErrorHandler("Server error occured", 500));
+        res.status(500).json({"error in cf recents" : err.message})
     }
 });
 
+router.get("/pcount", authenticate, async (req, res) => {
+    try {
+        const cfHandle = req.user.codeforcesId;
+        const allDataResponse = await axios(
+            `${url}/user.status?handle=${cfHandle}`
+        );
+        const allData = allDataResponse.data.result;
 
+        let responseArray = [];
+        let solvedQues = {};
+
+        let easy = 0
+        let mid = 0
+        let hard = 0
+
+        for (let i = 0; i < allData.length; i++) {
+            const submission = allData[i];
+            const problem = submission.problem;
+            const ProblemName = problem.name;
+
+            if (
+                submission.verdict === `OK` &&
+                !solvedQues[ProblemName]
+            ) {
+                solvedQues[ProblemName]++;
+
+                let diff = ratingToDifficulty(problem.rating)
+
+                if (diff === 'easy') easy++
+                else if (diff === 'medium') mid++
+                else hard++
+            }
+        }
+
+        res.status(200).json({
+            "Total Ques" : (easy + mid + hard),
+            "Easy" : easy,
+            "Medium" : mid,
+            "Hard" : hard
+        })
+    } catch (err) {
+        console.log(err.message)
+        res.status(500).json({"error in pcount for cf" : err.message})
+    }
+})
 
 module.exports = router;
