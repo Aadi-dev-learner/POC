@@ -1,10 +1,10 @@
 const express = require("express")
-// const userDB = require('../../models/User')
 const router = express.Router()
 const allQuetions = require('../../models/allQuetions')
-const authenticate = require("../../middlewares/authentication")
+const authenticate = require('../../middlewares/authentication')
+const credentials = require('../../middlewares/gfgCredentials')
 
-router.get('/pcount',authenticate, async (req, res) => {
+router.get('/pcount', authenticate, credentials, async (req, res) => {
     let easy = 0
     let mid = 0
     let hard = 0

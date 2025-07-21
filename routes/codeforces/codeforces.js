@@ -3,18 +3,13 @@ const axios = require("axios");
 const router = express.Router();
 const ErrorHandler = require("../../models/ErrorClass");
 const url = "https://codeforces.com/api";
-const createResponse = require("../../models/SubmissionResponseModel");
-const userModel = require("../../models/User");
+
 const authenticate = require("../../middlewares/authentication");  
+
 const autoUpdater = {
     interval: 10,
     last_updated: 1744272913,
 };
-
-router.get("/", (req, res) => {
-    res.send("This is the codeforces api");
-});
-
 
 function ratingToDifficulty(rating) {
     if (rating < 1000) {
@@ -36,10 +31,9 @@ router.get("/user-info",authenticate, (req, res, next) => {
         })
 });
 
-router.get("/submissions", authenticate, async (req, res, next) => {
+router.get("/recents", authenticate, async (req, res, next) => {
     try {
         const cfHandle = req.user.codeforcesId;
-        console.log(cfHandle);
         // Fetch all submissions once
         const allDataResponse = await axios(
             `${url}/user.status?handle=${cfHandle}`
@@ -64,10 +58,10 @@ router.get("/submissions", authenticate, async (req, res, next) => {
                 solvedQues[ProblemName] = [0, 0]; // [wrong_count, is_solved_flag]
 
                 const finalResponse = {
-                    title: ProblemName,
+                    pname: ProblemName,
                     platform: "codeforces",
                     difficulty: ratingToDifficulty(problem.rating),
-                    wrong_count: 0,
+                    wrongCnt: 0,
                     timestamp: submission.creationTimeSeconds,
                 };
 
@@ -91,7 +85,7 @@ router.get("/submissions", authenticate, async (req, res, next) => {
                             delete solvedQues[ProblemName];
                             // Also remove from responseArray
                             responseArray = responseArray.filter(
-                                (entry) => entry.name !== ProblemName
+                                (entry) => entry?.name !== ProblemName
                             );
                         } else {
                             solvedQues[ProblemName][1] = 1;
@@ -103,73 +97,63 @@ router.get("/submissions", authenticate, async (req, res, next) => {
 
         // Step 3: Update the wrong_count in response
         for (let i = 0; i < responseArray.length; i++) {
-            const currentQues = responseArray[i];
-            const ProblemName = currentQues.name;
+            let currentQues = responseArray[i];
+            const ProblemName = currentQues.pname;
 
-            currentQues.wrong_count = solvedQues[ProblemName]?.[0];
+            currentQues.wrongCnt = solvedQues[ProblemName]?.[0];
         }
 
         res.status(200).json(responseArray);
     } catch (err) {
-        console.log(err);
-        return next(new ErrorHandler("Server error occurred", 500));
+        console.log(err.message);
+        res.status(500).json({"error in cf recents" : err.message})
     }
 });
 
-router.post("/updates-details",authenticate,async(req,res,next) => {
+router.get("/question-count", authenticate, async (req, res) => {
     try {
-        const username = req.user.username;
-        const codeforcesId = req.body.codeforcesId || req.user.codeforcesId;
-        
-        const userFound = await userModel.updateOne({username : username}, {
-            codeforcesId : codeforcesId
-        });
-        res.send("Details updated");
-    }
-    catch(err) {
-        next(new ErrorHandler("Server error occured",500));
-    }
-
-})
-router.get("/question-count",authenticate, async (req, res, next) => {
-    try {
-        const ratings = { unrated: new Set() };
-        let count = 0;
         const cfHandle = req.user.codeforcesId;
-        const submissions = (
-            await axios(`${url}/user.status?handle=${cfHandle}`)
-        ).data.result;
+        const allDataResponse = await axios(
+            `${url}/user.status?handle=${cfHandle}`
+        );
+        const allData = allDataResponse.data.result;
 
-        for (i in submissions) {
-            if (!submissions[i].problem.rating) {
-                if (submissions[i].verdict == "OK") {
-                    count += 1;
-                    ratings["unrated"]?.add(submissions[i].problem.name);
-                }
-            } else {
-                if (submissions[i].verdict == "OK") {
-                    if (!ratings[submissions[i].problem.rating])
-                        ratings[submissions[i].problem.rating] = new Set();
-                    count += 1;
-                    ratings[submissions[i].problem.rating].add(
-                        submissions[i].problem.name
-                    );
-                }
+        let responseArray = [];
+        let solvedQues = {};
+
+        let easy = 0
+        let mid = 0
+        let hard = 0
+
+        for (let i = 0; i < allData.length; i++) {
+            const submission = allData[i];
+            const problem = submission.problem;
+            const ProblemName = problem.name;
+
+            if (
+                submission.verdict === `OK` &&
+                !solvedQues[ProblemName]
+            ) {
+                solvedQues[ProblemName]++;
+
+                let diff = ratingToDifficulty(problem.rating)
+
+                if (diff === 'easy') easy++
+                else if (diff === 'medium') mid++
+                else hard++
             }
         }
-        console.log(count);
-        let finalResponse = { total: 0 };
 
-        for (i in ratings) {
-            finalResponse[i] = ratings[i].size;
-            finalResponse.total += ratings[i].size;
-        }
-
-        res.status(200).json(finalResponse);
+        res.status(200).json({
+            "Total Ques" : (easy + mid + hard),
+            "Easy" : easy,
+            "Medium" : mid,
+            "Hard" : hard
+        })
     } catch (err) {
-        console.log(err);
-        return next(new ErrorHandler("Server error occured", 500));
+        console.log(err.message)
+        res.status(500).json({"error in pcount for cf" : err.message})
     }
-});
+})
 
 module.exports = router;

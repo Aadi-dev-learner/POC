@@ -30,7 +30,7 @@ app.use('/codeforces', codeforces);
 
 app.use((err, req, res, next) => {
   console.log(err);
-  res.status(err.status).json({ "err": err.message });
+  res.status(err.status || 500).json({ "err": err.message });
 })
 
 const PORT = process.env.PORT || 3000;
