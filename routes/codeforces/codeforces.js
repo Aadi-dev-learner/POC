@@ -32,7 +32,6 @@ router.get("/user-info",authenticate, (req, res, next) => {
             res.status(200).json(data.data);
         })
         .catch((err) => {
-
             return next(new ErrorHandler(err.message, 500));
         })
 });
@@ -112,11 +111,65 @@ router.get("/submissions", authenticate, async (req, res, next) => {
 
         res.status(200).json(responseArray);
     } catch (err) {
-        console.log(err.message);
-        return next(new ErrorHandler("Server error occured", 500));
+        console.log(err);
+        return next(new ErrorHandler("Server error occurred", 500));
     }
 });
 
+router.post("/updates-details",authenticate,async(req,res,next) => {
+    try {
+        const username = req.user.username;
+        const codeforcesId = req.body.codeforcesId || req.user.codeforcesId;
+        
+        const userFound = await userModel.updateOne({username : username}, {
+            codeforcesId : codeforcesId
+        });
+        res.send("Details updated");
+    }
+    catch(err) {
+        next(new ErrorHandler("Server error occured",500));
+    }
 
+})
+router.get("/question-count",authenticate, async (req, res, next) => {
+    try {
+        const ratings = { unrated: new Set() };
+        let count = 0;
+        const cfHandle = req.user.codeforcesId;
+        const submissions = (
+            await axios(`${url}/user.status?handle=${cfHandle}`)
+        ).data.result;
+
+        for (i in submissions) {
+            if (!submissions[i].problem.rating) {
+                if (submissions[i].verdict == "OK") {
+                    count += 1;
+                    ratings["unrated"]?.add(submissions[i].problem.name);
+                }
+            } else {
+                if (submissions[i].verdict == "OK") {
+                    if (!ratings[submissions[i].problem.rating])
+                        ratings[submissions[i].problem.rating] = new Set();
+                    count += 1;
+                    ratings[submissions[i].problem.rating].add(
+                        submissions[i].problem.name
+                    );
+                }
+            }
+        }
+        console.log(count);
+        let finalResponse = { total: 0 };
+
+        for (i in ratings) {
+            finalResponse[i] = ratings[i].size;
+            finalResponse.total += ratings[i].size;
+        }
+
+        res.status(200).json(finalResponse);
+    } catch (err) {
+        console.log(err);
+        return next(new ErrorHandler("Server error occured", 500));
+    }
+});
 
 module.exports = router;

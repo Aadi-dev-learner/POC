@@ -2,8 +2,9 @@ const express = require("express")
 // const userDB = require('../../models/User')
 const router = express.Router()
 const allQuetions = require('../../models/allQuetions')
+const authenticate = require("../../middlewares/authentication")
 
-router.get('/pcount', async (req, res) => {
+router.get('/pcount',authenticate, async (req, res) => {
     let easy = 0
     let mid = 0
     let hard = 0
