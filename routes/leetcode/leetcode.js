@@ -238,7 +238,7 @@ router.get("/question-count",authenticate, async (req, res, next) => {
 
 
 //a common route calling the getSubmissions function
-router.get("/submissions",authenticate, async (req, res, next) => {
+router.get("/recents",authenticate, async (req, res, next) => {
     try {
 
         const sessionToken = req.user.leetcodeSessionToken;

@@ -10,7 +10,7 @@ const codeforces = require("./routes/codeforces/codeforces");
 const auth = require("./routes/auth/auth");
 const jwt = require("jsonwebtoken");
 dotenv.config();
-mongoose.connect(`mongodb+srv://dankparth:${process.env.MONGOOSE_PASS}@cluster0.rx37ifz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`).then(() => {
+mongoose.connect(process.env.MONGO_URL).then(() => {
   console.log("connected to the db");
 }).catch(err => {
   console.log(`an error occured : ${err}`);

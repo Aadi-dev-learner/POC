@@ -48,7 +48,7 @@ router.get("/recents", authenticate, async (req, res, next) => {
                 solvedQues[ProblemName] = [0, 0]; // [wrong_count, is_solved_flag]
 
                 const finalResponse = {
-                    pname: ProblemName,
+                    title: ProblemName,
                     platform: "codeforces",
                     difficulty: ratingToDifficulty(problem.rating),
                     wrongCnt: 0,
@@ -93,7 +93,9 @@ router.get("/recents", authenticate, async (req, res, next) => {
             currentQues.wrongCnt = solvedQues[ProblemName]?.[0];
         }
 
-        res.status(200).json(responseArray);
+        let respp = responseArray.slice(req.query.offset, req.query.limit);
+
+        res.status(200).json(respp);
     } catch (err) {
         console.log(err.message);
         res.status(500).json({"error in cf recents" : err.message})
