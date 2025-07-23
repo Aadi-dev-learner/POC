@@ -152,7 +152,7 @@ async function getSubmissions(timestamp, sessionToken, limit, offset,prevData) {
             if (duplicates[element.titleSlug]) {
                 continue;
             }
-            if (prevData.includes(finalResponse)) {
+            if (prevData[element.title]) {
                 continue;
             }
             let problemDetails = await getProblemDetails(leetcode, element.titleSlug);
@@ -241,7 +241,11 @@ router.post("/recents", authenticate, async (req, res, next) => {
         const limit = req.query['limit'];
         const offset = req.query['offset'];
         const sessionToken = req.user.leetcodeSessionToken;
-        const response = await getSubmissions(autoUpdater.last_updated, sessionToken,limit,offset,prevData);
+        const prevMap = {};
+        prevData.forEach(item => {
+            prevMap[item?.title] = 1;
+        })
+        const response = await getSubmissions(autoUpdater.last_updated, sessionToken,limit,offset,prevMap);
         res.status(200).json(response);
     }
     catch (err) {
