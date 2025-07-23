@@ -20,6 +20,9 @@ router.get("/check-auth", async (req, res, next) => {
         });
 
     }
+
+
+
     catch {
         return next(new ErrorHandler("Token expired or invalid", 401));
     }
@@ -34,7 +37,9 @@ router.post("/login", async (req, res, next) => {
 
     try {
         const userFound = await userModel.findOne({ username: username });
+        console.log(userFound);
         if (!userFound) {
+            
             return next(new ErrorHandler("User not found", 404));
         }
         if (userFound.password != password) {
@@ -66,18 +71,20 @@ router.post("/login", async (req, res, next) => {
 router.post("/signup", async (req, res, next) => {
 
 
-    const { username, password, email, leetcodeId, gfgId, codeforcesId, sessionId, gfgCookie } = req.body;
+    const { username, password, email, leetcodeId, gfgId, codeforcesId, leetcodeSessionToken,gfgToken } = req.body;
 
     const user = userModel({
         username: username,
         password: password,
-        leetcodeSessionToken: sessionId,
+        leetcodeSessionToken: leetcodeSessionToken,
         leetcodeId: leetcodeId,
         codeforcesId: codeforcesId,
         gfgId: gfgId,
-        gfgCookie: gfgCookie,
-        email : email
+        gfgCookie : gfgToken,
+        email: email
     });
+
+
 
     try {
         const userFound = await userModel.findOne({ username: username });
@@ -97,13 +104,14 @@ router.post("/signup", async (req, res, next) => {
         res.status(200).json({
             "jwt_token": token,
             "username": username,
-            "leetcodeSessionToken": sessionId,
+            "leetcodeSessionToken": leetcodeSessionToken,
             "leetcodeId": leetcodeId,
             "gfgId": gfgId,
             "codeforcesId": codeforcesId
         });
     }
     catch (err) {
+        console.log(err);
         return next(new ErrorHandler(err, 500));
     }
 
