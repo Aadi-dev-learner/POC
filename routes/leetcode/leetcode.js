@@ -98,9 +98,9 @@ async function wrongCount(leetcode, titleSlug) {
             const submission = problemSubmissions.data.questionSubmissionList.submissions[i];
             if (submission.statusDisplay !== 'Accepted') {
                 count++;
-            } 
+            }
             else {
-                if (submission.timestamp*1000 < autoUpdater.last_updated) return -1;
+                if (submission.timestamp * 1000 < autoUpdater.last_updated) return -1;
                 else break;
             }
         }
@@ -113,7 +113,9 @@ async function wrongCount(leetcode, titleSlug) {
 }
 
 async function getProblemDetails(leetcode, titleSlug) {
+
     try {
+        console.log(titleSlug);
         const problemDetails = await leetcode.problem(titleSlug);
         return {
             title: problemDetails.title,
@@ -127,58 +129,51 @@ async function getProblemDetails(leetcode, titleSlug) {
     }
 }
 //function responsible for getting the recent submissions for a user
-async function getSubmissions(timestamp, sessionToken) {
+async function getSubmissions(timestamp, sessionToken, limit, offset,prevData) {
     try {
         // TODO: Make it respect the interval
         const leetcode = await createLeetcode(sessionToken);
-        let offset = 0;
-        let out = [];
-        while (true) {
-            const responseArray = await leetcode.submissions({ limit: 40, offset: offset });
-            let finalResponse = createResponse("leetcode");
-            let duplicates = {};
-            let reachedLimit = false;
-            let validElements = [];
-            for (i in responseArray) {
-                let element = responseArray[i];
-                if (element.timestamp < timestamp) {
-                    reachedLimit = true;
-                    break;
-                }
-                if (element.statusDisplay != 'Accepted') {
-                    continue; // Skip non-accepted submissions
-                }
-                if (duplicates[element.titleSlug]){
-                    continue;
-                }
-                let problemDetails = await getProblemDetails(leetcode, element.titleSlug);
-                let count = await wrongCount(leetcode, element.titleSlug);
-                console.log(count);
-                if (count === -1) {
-                    continue;
-                }
-                finalResponse = {
-                    title: element.title,
-                    platform: "leetcode",
-                    timestamp: element.timestamp,
-                    wrong_count: count,
-                    difficulty: problemDetails.difficulty,
-                }
-                responseArray[i] = finalResponse;
-                duplicates[element.titleSlug] = finalResponse;
-                validElements.push(responseArray[i]);
-            }
-
-            out = [...out, ...validElements];
-            if (reachedLimit) {
+        const responseArray = (await leetcode.user_progress_questions({limit:limit,skip:offset})).questions;
+        console.log(responseArray);
+        let finalResponse = createResponse("leetcode");
+        let duplicates = {};
+        let validElements = [];
+        for (i in responseArray) {
+            let element = responseArray[i];
+            console.log(element);
+            const date = new Date(element.lastSubmittedAt);
+            element.timestamp = date.getTime();
+            if (element.timestamp < timestamp) {
+                console.log(element.timestamp,timestamp);
+                console.log("broke");
+                reachedLimit = true;
                 break;
             }
+            if (duplicates[element.titleSlug]) {
+                continue;
+            }
+            if (prevData.includes(finalResponse)) {
+                continue;
+            }
+            let problemDetails = await getProblemDetails(leetcode, element.titleSlug);
+            let count = await wrongCount(leetcode, element.titleSlug);
+            if (count === -1) {
+                continue;
+            }
+            finalResponse = {
+                title: element.title,
+                platform: "leetcode",
+                timestamp: element.timestamp,
+                wrong_count: count,
+                difficulty: problemDetails.difficulty,
+            }
 
-            // TODO: Remove magic number
-            offset += 40; // 40 is the limit of submissions per request
+            responseArray[i] = finalResponse;
+            duplicates[element.titleSlug] = finalResponse;
+            validElements.push(responseArray[i]);
         }
-
-        return out;
+        console.log(validElements);
+        return validElements;
     } catch (err) {
         console.log(err)
         throw new ErrorHandler("Server error occurred", 500);
@@ -221,7 +216,6 @@ router.get("/question-count", authenticate, async (req, res, next) => {
         const axiosResponse = await createGraphReq(query, variables, next);
         console.log(axiosResponse);
         let submissionNum = axiosResponse.data.matchedUser.submitStatsGlobal?.acSubmissionNum;
-        console.log(submissionNum);
         res.status(200).json({
             total: submissionNum[0]?.count,
             easy: submissionNum[1]?.count,
@@ -241,11 +235,13 @@ router.get("/question-count", authenticate, async (req, res, next) => {
 
 
 //a common route calling the getSubmissions function
-router.get("/submissions", authenticate, async (req, res, next) => {
+router.post("/recents", authenticate, async (req, res, next) => {
     try {
-
+        const prevData = req.body.prevData;
+        const limit = req.query['limit'];
+        const offset = req.query['offset'];
         const sessionToken = req.user.leetcodeSessionToken;
-        const response = await getSubmissions(autoUpdater.last_updated, sessionToken);
+        const response = await getSubmissions(autoUpdater.last_updated, sessionToken,limit,offset,prevData);
         res.status(200).json(response);
     }
     catch (err) {
@@ -253,19 +249,18 @@ router.get("/submissions", authenticate, async (req, res, next) => {
         throw new ErrorHandler(err.message, err.status || 500);
     }
 })
-router.post("/update-details",authenticate,async (req,res,next) => {
+
+router.post("/update-details", authenticate, async (req, res, next) => {
     try {
         const username = req.user.username;
-        let token = req.body.leetcodeSessionToken || req.user.leetcodeSessionToken;
-        let leetcodeId = req.body.leetcodeId || req.user.leetcodeId;
-        await userModel.updateOne({username : username},{
-           leetcodeSessionToken : token,
-           leetcodeId : leetcodeId 
+        await userModel.updateOne({ username }, {
+            leetcodeSessionToken: req.body.leetcodeSessionToken || req.user.leetcodeSessionToken,
+            leetcodeId: req.body.leetcodeId || req.user.leetcodeId,
         });
         res.send("Details updated");
     }
-    catch(err) {
-        next(new ErrorHandler("A server error occured",500));
+    catch (err) {
+        next(new ErrorHandler("A server error occured", 500));
     }
 })
 
