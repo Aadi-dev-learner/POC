@@ -4,7 +4,7 @@ const allQuetions = require('../../models/allQuetions')
 const authenticate = require('../../middlewares/authentication')
 const credentials = require('../../middlewares/gfgCredentials')
 
-router.get('/pcount', authenticate, credentials, async (req, res) => {
+router.get('/question-count', authenticate, credentials, async (req, res) => {
     let easy = 0
     let mid = 0
     let hard = 0
@@ -27,10 +27,10 @@ router.get('/pcount', authenticate, credentials, async (req, res) => {
         total = easy + mid + hard
 
         res.json({
-            'Total Ques' : total,
-            'Easy' : easy,
-            'Medium' : mid, 
-            'Hard' : hard,
+            'total' : total,
+            'easy' : easy,
+            'medium' : mid, 
+            'hard' : hard,
         })
     } catch(err) {
         console.error('[Que Count Error]:', err.message)
