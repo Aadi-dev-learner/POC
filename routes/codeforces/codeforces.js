@@ -119,7 +119,6 @@ router.get("/question-count", authenticate, async (req, res) => {
         );
         const allData = allDataResponse.data.result;
 
-        let responseArray = [];
         let solvedQues = {};
 
         let easy = 0
@@ -146,13 +145,13 @@ router.get("/question-count", authenticate, async (req, res) => {
         }
 
         res.status(200).json({
-            "Total Ques": (easy + mid + hard),
-            "Easy": easy,
-            "Medium": mid,
-            "Hard": hard
+            "total": (easy + mid + hard),
+            "easy": easy,
+            "medium": mid,
+            "hard": hard
         })
     } catch (err) {
-        console.log(err.message)
+        // console.log(err.message)
         res.status(500).json({ "error in pcount for cf": err.message })
     }
 })
