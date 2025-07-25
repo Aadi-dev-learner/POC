@@ -63,7 +63,7 @@ router.get("/recents", authenticate, async (req, res, next) => {
                     platform: "codeforces",
                     difficulty: ratingToDifficulty(problem.rating),
                     wrongCnt: 0,
-                    timestamp: submission.creationTimeSeconds,
+                    timestamp: submission.creationTimeSeconds*1000,
                 };
 
                 responseArray.push(finalResponse);
@@ -104,9 +104,7 @@ router.get("/recents", authenticate, async (req, res, next) => {
             currentQues.wrongCnt = solvedQues[ProblemName]?.[0];
         }
 
-        let respp = responseArray.slice(req.query.offset, req.query.limit);
-
-        res.status(200).json(respp);
+        res.status(200).json(responseArray);
     } catch (err) {
         console.log(err.message);
         res.status(500).json({ "error in cf recents": err.message })
