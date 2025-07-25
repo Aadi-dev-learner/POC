@@ -242,7 +242,7 @@ router.post("/recents", authenticate, async (req, res, next) => {
         const offset = req.query['offset'];
         const sessionToken = req.user.leetcodeSessionToken;
         const prevMap = {};
-        prevData.forEach(item => {
+        prevData?.forEach(item => {
             prevMap[item?.title] = 1;
         })
         const response = await getSubmissions(autoUpdater.last_updated, sessionToken,limit,offset,prevMap);

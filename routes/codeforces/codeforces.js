@@ -63,7 +63,7 @@ router.get("/recents", authenticate, async (req, res, next) => {
                     platform: "codeforces",
                     difficulty: ratingToDifficulty(problem.rating),
                     wrongCnt: 0,
-                    timestamp: submission.creationTimeSeconds,
+                    timestamp: submission.creationTimeSeconds*1000,
                 };
 
                 responseArray.push(finalResponse);
