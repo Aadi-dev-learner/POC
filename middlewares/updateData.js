@@ -44,7 +44,7 @@ const updateQues = async (req, res, next) => {
                 timestamp = time.replace(' ', 'T')
 
                 ques.push({
-                    pname : q.slug,
+                    title : q.slug,
                     platform : 'gfg',
                     wrongCnt : wrongCount,
                     timestamp : new Date(timestamp).getTime(),
@@ -58,7 +58,7 @@ const updateQues = async (req, res, next) => {
         const newQues = []
 
         for (const q of ques) {
-            const exist = await allQues.exists({pname : q.pname})
+            const exist = await allQues.exists({title : q.title})
             if (!exist) {
                 newQues.push(q)
             }
