@@ -8,6 +8,8 @@ const problemCount = require('./routes/gfg/totalSubmissions');
 const leetcode = require("./routes/leetcode/leetcode");
 const codeforces = require("./routes/codeforces/codeforces");
 const auth = require("./routes/auth/auth");
+const updateDetails = require("./routes/gfg/updateDetails");
+
 const jwt = require("jsonwebtoken");
 dotenv.config();
 mongoose.connect(`mongodb+srv://dankparth:${process.env.MONGOOSE_PASS}@cluster0.rx37ifz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`).then(() => {
@@ -24,10 +26,9 @@ app.use("/auth", auth);
 app.use('/gfg', updateRoute);
 app.use('/gfg', recentRoute);
 app.use('/gfg', problemCount);
+app.use("/gfg",updateDetails);
 app.use('/leetcode', leetcode);
 app.use('/codeforces', codeforces);
-
-
 app.use((err, req, res, next) => {
   console.log(err);
   res.status(err.status || 500).json({ "err": err.message });

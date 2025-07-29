@@ -4,7 +4,7 @@ const recents = require('../../models/recents');
 const authenticate = require('../../middlewares/authentication')
 const credentials = require('../../middlewares/gfgCredentials')
 
-router.get('/recent', authenticate, async (req, res) => {
+router.get('/recents', authenticate, credentials, async (req, res) => {
     try {
         const recent = await recents.find({});
         res.json(recent);
