@@ -137,7 +137,7 @@ router.get("/question-count",authenticate, async (req, res, next) => {
         const ratings = { unrated: new Set() };
         let count = 0;
         const cfHandle = req.user.codeforcesId;
-        const submissions = (
+        const allData = (
             await axios(`${url}/user.status?handle=${cfHandle}`)
         ).data.result;
 
