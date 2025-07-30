@@ -3,9 +3,10 @@ const axios = require("axios");
 const router = express.Router();
 const ErrorHandler = require("../../models/ErrorClass");
 const url = "https://codeforces.com/api";
-const createResponse = require("../../models/SubmissionResponseModel");
+
+const authenticate = require("../../middlewares/authentication");
 const userModel = require("../../models/User");
-const authenticate = require("../../middlewares/authentication");  
+
 const autoUpdater = {
     interval: 10,
     last_updated: 1744272913,

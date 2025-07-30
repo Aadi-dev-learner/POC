@@ -112,8 +112,9 @@ async function wrongCount(leetcode, titleSlug) {
     }
 }
 
+
 //function responsible for getting the recent submissions for a user
-async function getSubmissions(timestamp, sessionToken) {
+async function getSubmissions(timestamp, sessionToken, limit, offset,prevData) {
     try {
         // TODO: Make it respect the interval
         const leetcode = await createLeetcode(sessionToken);
@@ -154,12 +155,31 @@ async function getSubmissions(timestamp, sessionToken) {
             if (reachedLimit) {
                 break;
             }
+            if (duplicates[element.titleSlug]) {
+                continue;
+            }
+            if (prevData[element.title]) {
+                continue;
+            }
+            let problemDetails = await getProblemDetails(leetcode, element.titleSlug);
+            let count = await wrongCount(leetcode, element.titleSlug);
+            if (count === -1) {
+                continue;
+            }
+            finalResponse = {
+                title: element.title,
+                platform: "leetcode",
+                timestamp: element.timestamp,
+                wrong_count: count,
+                difficulty: problemDetails.difficulty,
+            }
 
-            // TODO: Remove magic number
-            offset += 40; // 40 is the limit of submissions per request
+            responseArray[i] = finalResponse;
+            duplicates[element.titleSlug] = finalResponse;
+            validElements.push(responseArray[i]);
         }
-
-        return out;
+        console.log(validElements);
+        return validElements;
     } catch (err) {
         console.log(err)
         throw new ErrorHandler("Server error occurred", 500);
