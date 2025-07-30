@@ -20,9 +20,6 @@ router.get("/check-auth", async (req, res, next) => {
         });
 
     }
-
-
-
     catch {
         return next(new ErrorHandler("Token expired or invalid", 401));
     }
@@ -33,7 +30,7 @@ router.post("/login", async (req, res, next) => {
     const username = req.body.username;
     const password = req.body.password;
 
-
+    console.log(username);
 
     try {
         const userFound = await userModel.findOne({ username: username });

@@ -12,6 +12,11 @@ const autoUpdater = {
     last_updated: 1744272913,
 };
 
+router.get("/", (req, res) => {
+    res.send("This is the codeforces api");
+});
+
+
 function ratingToDifficulty(rating) {
     if (rating < 1000) {
         return "easy";
@@ -35,6 +40,7 @@ router.get("/user-info", authenticate, (req, res, next) => {
 router.get("/recents", authenticate, async (req, res, next) => {
     try {
         const cfHandle = req.user.codeforcesId;
+        console.log(cfHandle);
         // Fetch all submissions once
         const allDataResponse = await axios(
             `${url}/user.status?handle=${cfHandle}`
@@ -86,7 +92,7 @@ router.get("/recents", authenticate, async (req, res, next) => {
                             delete solvedQues[ProblemName];
                             // Also remove from responseArray
                             responseArray = responseArray.filter(
-                                (entry) => entry?.name !== ProblemName
+                                (entry) => entry.name !== ProblemName
                             );
                         } else {
                             solvedQues[ProblemName][1] = 1;
@@ -98,10 +104,10 @@ router.get("/recents", authenticate, async (req, res, next) => {
 
         // Step 3: Update the wrong_count in response
         for (let i = 0; i < responseArray.length; i++) {
-            let currentQues = responseArray[i];
-            const ProblemName = currentQues.pname;
+            const currentQues = responseArray[i];
+            const ProblemName = currentQues.name;
 
-            currentQues.wrongCnt = solvedQues[ProblemName]?.[0];
+            currentQues.wrong_count = solvedQues[ProblemName]?.[0];
         }
 
         res.status(200).json(responseArray);
@@ -111,13 +117,29 @@ router.get("/recents", authenticate, async (req, res, next) => {
     }
 });
 
-router.get("/question-count", authenticate, async (req, res) => {
+router.post("/updates-details",authenticate,async(req,res,next) => {
     try {
+        const username = req.user.username;
+        const codeforcesId = req.body.codeforcesId || req.user.codeforcesId;
+        
+        const userFound = await userModel.updateOne({username : username}, {
+            codeforcesId : codeforcesId
+        });
+        res.send("Details updated");
+    }
+    catch(err) {
+        next(new ErrorHandler("Server error occured",500));
+    }
+
+})
+router.get("/question-count",authenticate, async (req, res, next) => {
+    try {
+        const ratings = { unrated: new Set() };
+        let count = 0;
         const cfHandle = req.user.codeforcesId;
-        const allDataResponse = await axios(
-            `${url}/user.status?handle=${cfHandle}`
-        );
-        const allData = allDataResponse.data.result;
+        const submissions = (
+            await axios(`${url}/user.status?handle=${cfHandle}`)
+        ).data.result;
 
         let solvedQues = {};
 
@@ -143,6 +165,8 @@ router.get("/question-count", authenticate, async (req, res) => {
                 else hard++
             }
         }
+        console.log(count);
+        let finalResponse = { total: 0 };
 
         res.status(200).json({
             "total": (easy + mid + hard),

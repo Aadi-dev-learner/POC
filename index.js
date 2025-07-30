@@ -12,7 +12,7 @@ const updateDetails = require("./routes/gfg/updateDetails");
 
 const jwt = require("jsonwebtoken");
 dotenv.config();
-mongoose.connect(process.env.MONGO_URL).then(() => {
+mongoose.connect(`mongodb+srv://dankparth:${process.env.MONGOOSE_PASS}@cluster0.rx37ifz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`).then(() => {
   console.log("connected to the db");
 }).catch(err => {
   console.log(`an error occured : ${err}`);
@@ -31,7 +31,7 @@ app.use('/leetcode', leetcode);
 app.use('/codeforces', codeforces);
 app.use((err, req, res, next) => {
   console.log(err);
-  res.status(err.status || 500).json({ "err": err.message });
+  res.status(err.status).json({ "err": err.message });
 })
 
 const PORT = process.env.PORT || 3000;

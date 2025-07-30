@@ -42,7 +42,7 @@ const updateQues = async (req, res, next) => {
                 }
 
                 timestamp = time.replace(' ', 'T')
-
+                // console.log(timestamp)
                 ques.push({
                     title : q.slug,
                     platform : 'gfg',
