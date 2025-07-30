@@ -3,7 +3,7 @@ const express = require("express")
 const router = express.Router()
 const allQuetions = require('../../models/allQuetions')
 const authenticate = require("../../middlewares/authentication")
-
+const credentials = require("../../middlewares/gfgCredentials");
 router.get('/question-count', authenticate, credentials, async (req, res) => {
     let easy = 0
     let mid = 0

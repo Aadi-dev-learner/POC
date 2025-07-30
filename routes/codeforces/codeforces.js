@@ -37,7 +37,7 @@ router.get("/user-info", authenticate, (req, res, next) => {
         })
 });
 
-router.get("/submissions", authenticate, async (req, res, next) => {
+router.get("/recents", authenticate, async (req, res, next) => {
     try {
         const cfHandle = req.user.codeforcesId;
         console.log(cfHandle);
