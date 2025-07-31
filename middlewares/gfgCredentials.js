@@ -9,7 +9,7 @@ const injectGfgCredentials = (req, res, next) => {
         req.body = req.body || {}
         req.body.handle = req.user.gfgId
         
-        // req.user.gfgId
+        username = req.user.gfgId
 
         req.headers.cookie = req.user.gfgCookie
 

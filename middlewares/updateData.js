@@ -41,9 +41,10 @@ const updateQues = async (req, res, next) => {
                     }
                 }
 
-                timestamp = time.replace(' ', 'T')
-                // console.log(timestamp)
+                let timestamp = time.replace(' ', 'T')
+
                 ques.push({
+                    user : req.body.handle,
                     title : q.slug,
                     platform : 'gfg',
                     wrongCnt : wrongCount,
@@ -53,12 +54,12 @@ const updateQues = async (req, res, next) => {
             }
         }
 
-        await recentQues.deleteMany({})
+        await recentQues.deleteMany({ user : req.body.handle })
         
         const newQues = []
 
         for (const q of ques) {
-            const exist = await allQues.exists({title : q.title})
+            const exist = await allQues.exists({ title : q.title, user : req.body.handle })
             if (!exist) {
                 newQues.push(q)
             }
