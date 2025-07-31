@@ -1,7 +1,5 @@
 const express = require("express")
-// const userDB = require('../../models/User')
 const router = express.Router()
-const allQuetions = require('../../models/allQuetions')
 const authenticate = require("../../middlewares/authentication")
 const credentials = require("../../middlewares/gfgCredentials");
 router.get('/question-count', authenticate, credentials, async (req, res) => {
@@ -18,15 +16,9 @@ router.get('/question-count', authenticate, credentials, async (req, res) => {
 
         const result = data?.result || {}
 
-        for (const difficulty of Object.keys(result)) {
-
-            if (difficulty === 'School' || difficulty === 'Basic') continue
-                
-            if (difficulty === 'Easy') easy += result[difficulty].length
-            else if (difficulty === 'Medium') mid += result[difficulty].length
-            else if (difficulty === 'Hard') hard += result[difficulty].length
-            
-        }
+        easy += result['Easy'].length
+        mid += result['Medium'].length
+        hard += result['Hard'].length
 
         res.json({ "Total" : easy + mid + hard, "Easy" : easy, "Medium" : mid, "Hard" : hard });
 
