@@ -8,35 +8,31 @@ router.get('/question-count', authenticate, credentials, async (req, res) => {
     let easy = 0
     let mid = 0
     let hard = 0
-    let total = 0
 
     try {
-        const all = await allQuetions.find({})
-        for (que in all) {
-            if (all[que].difficulty === "Easy") {
-                easy++
-            }
-            else if (all[que].difficulty === "Medium") {
-                mid++
-            }
-            else if (all[que].difficulty === "Hard"){
-                hard++
-            }
+        const { data } = await axios.post('https://practiceapi.geeksforgeeks.org/api/v1/user/problems/submissions/', req.body || {}, {
+            headers: {
+                'Content-Type': 'application/json', 
+                'Cookie' : req.headers.cookie || '',
+        }})
+
+        const result = data?.result || {}
+
+        for (const difficulty of Object.keys(result)) {
+
+            if (difficulty === 'School' || difficulty === 'Basic') continue
+                
+            if (difficulty === 'Easy') easy++
+            else if (difficulty === 'Hard') hard++
+            else mid++
+            
         }
 
-        total = easy + mid + hard
+        res.json({ "Total" : easy + mid + hard, "Easy" : easy, "Medium" : mid, "Hard" : hard });
 
-        res.json({
-            'total' : total,
-            'easy' : easy,
-            'medium' : mid, 
-            'hard' : hard,
-        })
-    } catch(err) {
-        console.error('[Que Count Error]:', err.message)
-        res.status(500).json({
-            error : 'failed to fetch all questions'
-        })
+    } catch (err) {
+        console.error('[Update Error]:', err.message)
+        res.status(500).json({ error: 'Failed to fetch total questions' });
     }
 
     
