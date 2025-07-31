@@ -22,9 +22,9 @@ router.get('/question-count', authenticate, credentials, async (req, res) => {
 
             if (difficulty === 'School' || difficulty === 'Basic') continue
                 
-            if (difficulty === 'Easy') easy++
-            else if (difficulty === 'Hard') hard++
-            else mid++
+            if (difficulty === 'Easy') easy += result[difficulty].length
+            else if (difficulty === 'Medium') mid += result[difficulty].length
+            else if (difficulty === 'Hard') hard += result[difficulty].length
             
         }
 
