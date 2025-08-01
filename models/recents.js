@@ -2,7 +2,7 @@ const mongoose = require("mongoose")
 
 const recents = new mongoose.Schema({
     user : String,
-    title : {type : String, unique : true},
+    title : String,
     platform : String,
     wrongCnt : Number,
     timestamp : Number,
