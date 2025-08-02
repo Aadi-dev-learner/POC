@@ -1,5 +1,6 @@
 const express = require("express")
 const router = express.Router()
+const axios = require('axios')
 const authenticate = require("../../middlewares/authentication")
 const credentials = require("../../middlewares/gfgCredentials");
 router.get('/question-count', authenticate, credentials, async (req, res) => {
@@ -16,9 +17,9 @@ router.get('/question-count', authenticate, credentials, async (req, res) => {
 
         const result = data?.result || {}
 
-        easy += result['Easy'].length
-        mid += result['Medium'].length
-        hard += result['Hard'].length
+        easy += Object.keys(result.Easy).length
+        mid += Object.keys(result.Medium).length
+        hard += Object.keys(result.Hard).length
 
         res.json({ "total" : easy + mid + hard, "easy" : easy, "medium" : mid, "hard" : hard });
 
