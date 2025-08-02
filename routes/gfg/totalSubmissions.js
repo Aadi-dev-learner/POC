@@ -20,7 +20,7 @@ router.get('/question-count', authenticate, credentials, async (req, res) => {
         mid += result['Medium'].length
         hard += result['Hard'].length
 
-        res.json({ "Total" : easy + mid + hard, "Easy" : easy, "Medium" : mid, "Hard" : hard });
+        res.json({ "total" : easy + mid + hard, "easy" : easy, "medium" : mid, "hard" : hard });
 
     } catch (err) {
         console.error('[Update Error]:', err.message)
