@@ -18,9 +18,9 @@ router.get("/", (req, res) => {
 
 
 function ratingToDifficulty(rating) {
-    if (rating < 1000) {
+    if (rating <= 1000) {
         return "easy";
-    } else if (rating < 1400) {
+    } else if (rating <= 1400) {
         return "medium";
     } else {
         return "hard";
@@ -134,7 +134,7 @@ router.post("/updates-details",authenticate,async(req,res,next) => {
 })
 router.get("/question-count",authenticate, async (req, res, next) => {
     try {
-        const ratings = { unrated: new Set() };
+        // const ratings = { unrated: new Set() };
         let count = 0;
         const cfHandle = req.user.codeforcesId;
         const allData = (
@@ -166,7 +166,7 @@ router.get("/question-count",authenticate, async (req, res, next) => {
             }
         }
         console.log(count);
-        let finalResponse = { total: 0 };
+        // let finalResponse = { total: 0 };
 
         res.status(200).json({
             "total": (easy + mid + hard),
@@ -176,20 +176,8 @@ router.get("/question-count",authenticate, async (req, res, next) => {
         })
     } catch (err) {
         // console.log(err.message)
-        res.status(500).json({ "error in pcount for cf": err.message })
+        res.status(500).json({ "error in question-count for cf": err.message })
     }
 })
-router.post("/update-details", authenticate, async (req, res, next) => {
-    try {
-        const username = req.user.username;
-        await userModel.updateOne({ username }, {
-            codeforcesId: req.body.codeforcesId || req.user.codeforcesId,
-        });
-        res.send("Details updated");
-    }
-    catch (err) {
-        next(new ErrorHandler("A server error occured", 500));
-    }
-});
 
 module.exports = router;
