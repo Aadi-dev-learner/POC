@@ -12,6 +12,7 @@ const updateQues = async (req, res, next) => {
 
         const result = data?.result || {}
         const ques = []
+        console.log("first")
 
         for (const difficulty of Object.keys(result)) {
 
@@ -26,6 +27,8 @@ const updateQues = async (req, res, next) => {
                         'Content-Type': 'application/json', 
                         'Cookie' : req.headers.cookie || '',
                 }}))
+
+                console.log("second");
 
                 const submissions = problemData.data.results?.submissions || []
 
@@ -75,7 +78,7 @@ const updateQues = async (req, res, next) => {
         next()
 
     } catch (err) {
-        console.error('[Update Error]:', err.message)
+        console.error('[Update Error]:', err)
         next()
     }
 }

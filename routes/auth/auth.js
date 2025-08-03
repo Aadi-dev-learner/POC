@@ -55,7 +55,8 @@ router.post("/login", async (req, res, next) => {
             "leetcodeId": userFound.leetcodeId,
             "gfgId": userFound.gfgId,
             "codeforcesId": userFound.codeforcesId,
-            "leetcodeSessionToken": userFound.leetcodeSessionToken
+            "leetcodeSessionToken": userFound.leetcodeSessionToken,
+            "gfgCookie" : userFound.gfgCookie,
         });
 
     }
@@ -80,8 +81,6 @@ router.post("/signup", async (req, res, next) => {
         gfgCookie : gfgToken,
         email: email
     });
-
-
 
     try {
         const userFound = await userModel.findOne({ username: username });
