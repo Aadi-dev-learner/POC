@@ -44,14 +44,23 @@ const updateQues = async (req, res, next) => {
                     }
                 }
 
-                let timestamp = time.replace(' ', 'T')
+                let timestamp = 0;
+                let isotime = time.replace(' ', 'T');
+                let ms = new Date(isotime).getTime();
+
+                if (isNaN(ms)) {
+                    timestamp = -1;
+                } else {
+                    timestamp = ms;
+                }
+
 
                 ques.push({
                     user : req.body.handle,
                     title : q.slug,
                     platform : 'gfg',
                     wrongCnt : wrongCount,
-                    timestamp : new Date(timestamp).getTime(),
+                    timestamp : timestamp,
                     difficulty
                 })
             }
