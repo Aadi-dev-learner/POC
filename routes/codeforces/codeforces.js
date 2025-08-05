@@ -38,83 +38,80 @@ router.get("/user-info", authenticate, (req, res, next) => {
 });
 
 router.get("/recents", authenticate, async (req, res, next) => {
-    try {
-        const cfHandle = req.user.codeforcesId;
-        console.log(cfHandle);
-        // Fetch all submissions once
-        const allDataResponse = await axios(
-            `${url}/user.status?handle=${cfHandle}`
-        );
-        const allData = allDataResponse.data.result;
+  try {
+    const cfHandle = req.user.codeforcesId;
+    const allDataResponse = await axios.get(
+      `${url}/user.status?handle=${cfHandle}`
+    );
+    const allData = allDataResponse.data.result;
 
-        let responseArray = [];
-        let solvedQues = {};
-        const timestamp = autoUpdater.last_updated;
+    let responseArray = [];
+    let solvedQuesMap = new Map(); // key: uniqueId -> [wrong_count, is_solved_flag]
+    const timestamp = autoUpdater.last_updated;
 
-        // Step 1: Identify unique accepted problems after `last_updated`
-        for (let i = 0; i < allData.length; i++) {
-            const submission = allData[i];
-            const problem = submission.problem;
-            const ProblemName = problem.name;
+    // Step 1: Identify accepted problems after last_updated
+    for (let i = 0; i < allData.length; i++) {
+      const submission = allData[i];
+      const problem = submission.problem;
+      const ProblemName = problem.name;
+      const uniqueId = `${problem.contestId}-${problem.index}-${ProblemName}`;
 
-            if (
-                submission.verdict === `OK` &&
-                submission.creationTimeSeconds > timestamp &&
-                !solvedQues[ProblemName]
-            ) {
-                solvedQues[ProblemName] = [0, 0]; // [wrong_count, is_solved_flag]
+      if (
+        submission.verdict === "OK" &&
+        submission.creationTimeSeconds > timestamp &&
+        !solvedQuesMap.has(uniqueId)
+      ) {
+        solvedQuesMap.set(uniqueId, [0, 0]); // [wrong_count, is_solved_flag]
 
-                const finalResponse = {
-                    title: ProblemName,
-                    platform: "codeforces",
-                    difficulty: ratingToDifficulty(problem.rating),
-                    wrongCnt: 0,
-                    timestamp: submission.creationTimeSeconds*1000,
-                };
-
-                responseArray.push(finalResponse);
-            }
-        }
-
-        // Step 2: Traverse all submissions to compute wrong counts
-        for (let i = allData.length - 1; i >= 0; i--) {
-            const submission = allData[i];
-            const ProblemName = submission.problem.name;
-
-            if (solvedQues[ProblemName]) {
-                if (solvedQues[ProblemName][1] === 0) {
-                    if (submission.verdict !== "OK") {
-                        solvedQues[ProblemName][0]++;
-                    } else {
-                        // Check if first correct submission is BEFORE timestamp
-                        if (submission.creationTimeSeconds < timestamp) {
-                            // Remove from solvedQues
-                            delete solvedQues[ProblemName];
-                            // Also remove from responseArray
-                            responseArray = responseArray.filter(
-                                (entry) => entry.name !== ProblemName
-                            );
-                        } else {
-                            solvedQues[ProblemName][1] = 1;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Step 3: Update the wrong_count in response
-        for (let i = 0; i < responseArray.length; i++) {
-            const currentQues = responseArray[i];
-            const ProblemName = currentQues.name;
-
-            currentQues.wrong_count = solvedQues[ProblemName]?.[0];
-        }
-
-        res.status(200).json(responseArray);
-    } catch (err) {
-        console.log(err.message);
-        res.status(500).json({ "error in cf recents": err.message })
+        responseArray.push({
+          title: ProblemName,
+          name: uniqueId,
+          platform: "codeforces",
+          difficulty: ratingToDifficulty(problem.rating),
+          wrong_count: 0,
+          timestamp: submission.creationTimeSeconds * 1000,
+        });
+      }
     }
+
+    // Step 2: Backtrack to calculate wrong submissions and handle early ACs
+    for (let i = allData.length - 1; i >= 0; i--) {
+      const submission = allData[i];
+      const problem = submission.problem;
+      const uniqueId = `${problem.contestId}-${problem.index}-${problem.name}`;
+
+      if (solvedQuesMap.has(uniqueId)) {
+        const [wrongCount, isSolved] = solvedQuesMap.get(uniqueId);
+
+        if (!isSolved) {
+          if (submission.verdict !== "OK") {
+            solvedQuesMap.set(uniqueId, [wrongCount + 1, isSolved]);
+          } else {
+            if (submission.creationTimeSeconds < timestamp) {
+              solvedQuesMap.delete(uniqueId);
+              responseArray = responseArray.filter(
+                (entry) => entry.name !== uniqueId
+              );
+            } else {
+              solvedQuesMap.set(uniqueId, [wrongCount, 1]);
+            }
+          }
+        }
+      }
+    }
+
+    // Step 3: Update wrong counts in responseArray
+    for (let i = 0; i < responseArray.length; i++) {
+      const entry = responseArray[i];
+      const key = entry.name;
+      entry.wrong_count = solvedQuesMap.get(key)?.[0] || 0;
+    }
+
+    res.status(200).json(responseArray);
+  } catch (err) {
+    console.log(err.message);
+    res.status(500).json({ "error in cf recents": err.message });
+  }
 });
 
 router.post("/updates-details",authenticate,async(req,res,next) => {
@@ -132,52 +129,48 @@ router.post("/updates-details",authenticate,async(req,res,next) => {
     }
 
 })
-router.get("/question-count",authenticate, async (req, res, next) => {
-    try {
-        // const ratings = { unrated: new Set() };
-        let count = 0;
-        const cfHandle = req.user.codeforcesId;
-        const allData = (
-            await axios(`${url}/user.status?handle=${cfHandle}`)
-        ).data.result;
 
-        let solvedQues = {};
+router.get("/question-count", authenticate, async (req, res) => {
+  try {
+    const cfHandle = req.user.codeforcesId;
+    const { data } = await axios.get(`${url}/user.status?handle=${cfHandle}`);
+    const allData = data.result;
 
-        let easy = 0
-        let mid = 0
-        let hard = 0
+    let solvedQues = new Set();
+    let easy = 0,
+      mid = 0,
+      hard = 0;
 
-        for (let i = 0; i < allData.length; i++) {
-            const submission = allData[i];
-            const problem = submission.problem;
-            const ProblemName = problem.name;
+    for (let submission of allData) {
+      if (submission.verdict === "OK") {
+        const problem = submission.problem;
 
-            if (
-                submission.verdict === `OK` &&
-                !solvedQues[ProblemName]
-            ) {
-                solvedQues[ProblemName]++;
+        const uniqueId = `${problem.contestId}-${problem.index}-${problem.name}`;
 
-                let diff = ratingToDifficulty(problem.rating)
+        if (!solvedQues.has(uniqueId)) {
+          solvedQues.add(uniqueId);
 
-                if (diff === 'easy') easy++
-                else if (diff === 'medium') mid++
-                else hard++
-            }
+          if (problem.rating) {
+            let diff = ratingToDifficulty(problem.rating);
+            if (diff === "easy") easy++;
+            else if (diff === "medium") mid++;
+            else hard++;
+          }
         }
-        console.log(count);
-        // let finalResponse = { total: 0 };
-
-        res.status(200).json({
-            "total": (easy + mid + hard),
-            "easy": easy,
-            "medium": mid,
-            "hard": hard
-        })
-    } catch (err) {
-        // console.log(err.message)
-        res.status(500).json({ "error in question-count for cf": err.message })
+      }
     }
-})
+
+    res.status(200).json({
+      total: solvedQues.size,
+      easy,
+      medium: mid,
+      hard,
+    });
+  } catch (err) {
+    res.status(500).json({ "error in question-count for cf": err.message });
+  }
+});
+
+
 
 module.exports = router;
